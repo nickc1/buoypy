@@ -1,8 +1,12 @@
 
-buoypy
+buoypy - a work in progress 
 ========
 
 Functions to query the [NDBC](http://www.ndbc.noaa.gov/).
+
+Currently on realtime data can be accessed.
+
+
 
 The real time data for all of their buoys can be found at:
 http://www.ndbc.noaa.gov/data/realtime2/
