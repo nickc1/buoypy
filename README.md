@@ -35,7 +35,7 @@ Each buoy has the data:
 
 #Examples
 
-'''Python
+```python
 import buoypy as bp
 
 rt = bp.realtime(41013) #Frying pan shoals
@@ -55,7 +55,8 @@ ax[0].set_ylabel('Ocean Temperature ($^\circ C$)')
 ax[1].set_ylabel('Wave Height ($m$)')
 
 plt.savefig('../figures/realtime.png',bbox_inches='tight')
-'''
+```
+
 ![Image of Yaktocat](/figures/realtime.png)
 
 
