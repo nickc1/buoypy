@@ -57,6 +57,6 @@ ax[1].set_ylabel('Wave Height ($m$)')
 plt.savefig('../figures/realtime.png',bbox_inches='tight')
 ```
 
-![Image of Yaktocat](/figures/realtime.png)
+![bouypy plots](/figures/realtime.png)
 
 
