@@ -57,6 +57,8 @@ column headings.
 import pandas as pd
 import numpy as np
 import urllib2
+from sqlalchemy import create_engine # database connection
+import datetime
 
 class realtime:
 
@@ -499,7 +501,7 @@ class historic_data:
 				'ATMP', 'WTMP', 'DEWP', 'VIS', 'TIDE']
 
 
-		#before 2006 and before
+		#before 2006 to 2000
 		else:
 			date_str = df.YYYY.astype('str') + ' ' + df.MM.astype('str') + \
 				' ' + df.DD.astype('str') + ' ' + df.hh.astype('str')
@@ -593,14 +595,18 @@ class historic_data:
 		return df
 
 
-class write_data:
+class write_data(historic_data):
 
-	def __init__(self, buoy):
+	def __init__(self, buoy, year, year_range,db_name = 'buoydata.db'):
 		self.buoy = buoy
+		self.year = year
+		self.year_range=year_range
+		self.db_name = db_name
 
-	def write_data_spec(self):
+	def write_all_stand_meteo(self):
 		"""
-		Write the raw spectral wave data to the database.
+		Write the standard meteological data to the database. See get_all_stand_meteo
+		for a discription of the data. Which is in the historic data class.
 
 		Returns
 		-------
@@ -610,321 +616,59 @@ class write_data:
 
 		"""
 
+		#hist = self.historic_data(self.buoy,self.year,year_range=self.year_range)
+		df = self.get_all_stand_meteo()
 
-		return 
+		#write the df to disk
+		disk_engine = create_engine('sqlite:///' + self.db_name)
+
+		table_name = str(self.buoy) + '_buoy'
+		df.to_sql(table_name,disk_engine,if_exists='append')
+		sql = disk_engine.execute("""DELETE FROM wave_data 
+			WHERE rowid not in 
+			(SELECT max(rowid) FROM wave_data GROUP BY date)""")
+
+		print(str(self.buoy) + 'written to database : ' + str(self.db_name))
 
 
-	def write_ocean(self):
-		"""
-		write oceanic data. For the buoys explored,
-		O2%, O2PPM, CLCON, TURB, PH, EH were always NaNs
+		return True 
 
 
-		Returns
-		-------
-		df : pandas dataframe
-			Index is the date and columns are:
-			DEPTH	m
-			OTMP	degc
-			COND	mS/cm 
-			SAL 	PSU
-			O2%		%
-			02PPM	ppm
-			CLCON	ug/l
-			TURB	FTU
-			PH 		-
-			EH 		mv
+class read_data:
+	"""
+	Reads the data from the setup database
+	"""
 
-		"""
+	def __init__(self, buoy, year_range=None):
+		self.buoy = buoy
+		self.year_range = year_range
+		self.disk_eng = 'sqlite:///buoydata.db'
 
+
+	def get_stand_meteo(self):
+
+		disk_engine = create_engine(self.disk_eng)
 
 		
-		return df
+		df = pd.read_sql_query(" SELECT * FROM " + "'" + str(self.buoy) + '_buoy' + "'", disk_engine)
 
+		#give it a datetime index since it was stripped by sqllite
+		df.index = pd.to_datetime(df['index'])
+		df.index.name='date'
+		df.drop('index',axis=1,inplace=True)
 
-	def write_spec(self):
-		"""
-		Write the spectral wave data from the ndbc to the sql database. 
-
-		parameters
-		----------
-		buoy : string
-			Buoy number ex: '41013' is off wilmington, nc
-
-		Returns
-		-------
-		df : pandas dataframe
-			data frame containing the spectral data. index is the date
-			and the columns are:
-
-			HO, SwH, SwP, WWH, WWP, SwD, WWD, STEEPNESS, AVP, MWD
-
-			OR
-
-			WVHT  SwH  SwP  WWH  WWP SwD WWD  STEEPNESS  APD MWD
-
-
-		"""
-
-		params = 'spec'
-		base = 'http://www.ndbc.noaa.gov/data/realtime2/'
-		link = base + str(self.buoy) + '.' + params
-
-		#combine the first five date columns YY MM DD hh mm and make index
-		df = pd.read_csv(link, delim_whitespace=True, na_values='MM', 
-		parse_dates=[[0,1,2,3,4]], index_col=0)
-
-		try:
-			#units are in the second row drop them
-			#df.columns = df.columns + '('+ df.iloc[0] + ')'
-			df.drop(df.index[0], inplace=True)
-
-			#convert the dates to datetimes
-			df.index = pd.to_datetime(df.index,format="%Y %m %d %H %M")
-
-			#convert to floats
-			cols = ['WVHT','SwH','SwP','WWH','WWP','APD','MWD']
-			df[cols] = df[cols].astype(float)
-		except:
-
-			#convert the dates to datetimes
-			df.index = pd.to_datetime(df.index,format="%Y %m %d %H %M")
-
-			#convert to floats
-			cols = ['H0','SwH','SwP','WWH','WWP','AVP','MWD']
-			df[cols] = df[cols].astype(float)
+		if self.year_range:
+			print("""this is not implemented in SQL. Could be slow. 
+					Get out while you can!!!""" )
 			
+			start,stop = (self.year_range)
+			begin = df.index.searchsorted(datetime.datetime(start, 1, 1))
+			end = df.index.searchsorted(datetime.datetime(stop, 12, 31))
+			df = df.ix[begin:end]
+
+		
 
 		return df
-
-
-
-	def get_supl(self):
-		"""
-		Get supplemental data
-
-		Returns
-		-------
-		data frame containing the spectral data. index is the date
-		and the columns are:
-
-		PRES		hpa
-		PTIME		hhmm
-		WSPD		m/s
-		WDIR		degT
-		WTIME		hhmm
-
-
-		"""
-		params = 'supl'
-		base = 'http://www.ndbc.noaa.gov/data/realtime2/'
-		link = base + str(self.buoy) + '.' + params
-
-		#combine the first five date columns YY MM DD hh mm and make index
-		df = pd.read_csv(link, delim_whitespace=True, na_values='MM',
-			parse_dates=[[0,1,2,3,4]], index_col=0)
-
-		#units are in the second row drop them
-		df.drop(df.index[0], inplace=True)
-
-		#convert the dates to datetimes
-		df.index = pd.to_datetime(df.index,format="%Y %m %d %H %M")
-
-		#convert to floats
-		cols = ['PRES','PTIME','WSPD','WDIR','WTIME']
-		df[cols] = df[cols].astype(float)
-
-		return df
-
-
-	def get_swdir(self):
-		"""
-		Spectral wave data for alpha 1.
-
-		Returns
-		-------
-
-		specs : pandas dataframe
-			Index is the date and the columns are the spectrum. Values in
-			the table indicate how much energy is at each spectrum.
-		"""
-
-
-		params = 'swdir'
-		base = 'http://www.ndbc.noaa.gov/data/realtime2/'
-		link = base + str(self.buoy) + '.' + params
-
-		#combine the first five date columns YY MM DD hh mm and make index
-		df = pd.read_csv(link,delim_whitespace=True,skiprows=1,na_values=999,
-			header=None, parse_dates=[[0,1,2,3,4]], index_col=0)
-
-		#convert the dates to datetimes
-		df.index = pd.to_datetime(df.index,format="%Y %m %d %H %M")
-
-		specs = df.iloc[:,0::2]
-		freqs = df.iloc[0,1::2]
-
-		specs.columns=freqs
-
-		#remove the parenthesis from the column index
-		specs.columns = [cname.replace('(','').replace(')','') 
-			for cname in specs.columns]
-
-		return specs
-
-	def get_swdir2(self):
-		"""
-		Spectral wave data for alpha 2.
-
-		Returns
-		-------
-
-		specs : pandas dataframe
-			Index is the date and the columns are the spectrum. Values in
-			the table indicate how much energy is at each spectrum.
-		"""
-		params = 'swdir2'
-		base = 'http://www.ndbc.noaa.gov/data/realtime2/'
-		link = base + str(self.buoy) + '.' + params
-
-		#combine the first five date columns YY MM DD hh mm and make index
-		df = pd.read_csv(link,delim_whitespace=True,skiprows=1,
-			header=None, parse_dates=[[0,1,2,3,4]], index_col=0)
-
-		#convert the dates to datetimes
-		df.index = pd.to_datetime(df.index,format="%Y %m %d %H %M")
-
-		specs = df.iloc[:,0::2]
-		freqs = df.iloc[0,1::2]
-
-		specs.columns=freqs
-
-		#remove the parenthesis from the column index
-		specs.columns = [cname.replace('(','').replace(')','') 
-			for cname in specs.columns]
-
-		return specs
-
-	def get_swr1(self):
-		"""
-		Spectral wave data for r1.
-
-		Returns
-		-------
-
-		specs : pandas dataframe
-			Index is the date and the columns are the spectrum. Values in
-			the table indicate how much energy is at each spectrum.
-		"""
-
-
-		params = 'swr1'
-		base = 'http://www.ndbc.noaa.gov/data/realtime2/'
-		link = base + str(self.buoy) + '.' + params
-
-		#combine the first five date columns YY MM DD hh mm and make index
-		df = pd.read_csv(link,delim_whitespace=True,skiprows=1,
-			header=None, parse_dates=[[0,1,2,3,4]], index_col=0)
-
-		#convert the dates to datetimes
-		df.index = pd.to_datetime(df.index,format="%Y %m %d %H %M")
-
-		specs = df.iloc[:,0::2]
-		freqs = df.iloc[0,1::2]
-
-		specs.columns=freqs
-
-		#remove the parenthesis from the column index
-		specs.columns = [cname.replace('(','').replace(')','') 
-			for cname in specs.columns]
-
-		return specs
-
-	def get_swr2(self):
-		"""
-		Spectral wave data for r2.
-
-		Returns
-		-------
-
-		specs : pandas dataframe
-			Index is the date and the columns are the spectrum. Values in
-			the table indicate how much energy is at each spectrum.
-		"""
-
-		params = 'swr2'
-		base = 'http://www.ndbc.noaa.gov/data/realtime2/'
-		link = base + str(self.buoy) + '.' + params
-
-		#combine the first five date columns YY MM DD hh mm and make index
-		df = pd.read_csv(link,delim_whitespace=True,skiprows=1,
-			header=None, parse_dates=[[0,1,2,3,4]], index_col=0)
-
-		#convert the dates to datetimes
-		df.index = pd.to_datetime(df.index,format="%Y %m %d %H %M")
-
-		specs = df.iloc[:,0::2]
-		freqs = df.iloc[0,1::2]
-
-		specs.columns=freqs
-
-		#remove the parenthesis from the column index
-		specs.columns = [cname.replace('(','').replace(')','') 
-			for cname in specs.columns]
-
-		return specs
-
-	def get_txt(self):
-		"""
-		Retrieve standard Meteorological data. NDBC seems to be updating
-		the data with different column names, so this metric can return 
-		two possible data frames with different column names:
-
-		Returns
-		-------
-
-		df : pandas dataframe
-			Index is the date and the columns can be:
-
-			['WDIR','WSPD','GST','WVHT','DPD','APD','MWD',
-			'PRES','ATMP','WTMP','DEWP','VIS','PTDY','TIDE']
-
-			or
-
-			['WD','WSPD','GST','WVHT','DPD','APD','MWD','BARO',
-			'ATMP','WTMP','DEWP','VIS','PTDY','TIDE']
-
-		"""
-
-		params = 'txt'
-		base = 'http://www.ndbc.noaa.gov/data/realtime2/'
-		link = base + str(self.buoy) + '.' + params
-
-		#combine the first five date columns YY MM DD hh mm and make index
-		df = pd.read_csv(link, delim_whitespace=True, na_values='MM', 
-			parse_dates=[[0,1,2,3,4]], index_col=0)
-
-		try:
-			#first column is units, so drop it
-			df.drop(df.index[0], inplace=True)
-			#convert the dates to datetimes
-			df.index = pd.to_datetime(df.index,format="%Y %m %d %H %M")
-
-			#convert to floats
-			cols = ['WDIR','WSPD','GST','WVHT','DPD','APD','MWD',
-			'PRES','ATMP','WTMP','DEWP','VIS','PTDY','TIDE']
-			df[cols] = df[cols].astype(float)
-		except:
-
-			#convert the dates to datetimes
-			df.index = pd.to_datetime(df.index,format="%Y %m %d %H %M")
-
-			#convert to floats
-			cols = ['WD','WSPD','GST','WVHT','DPD','APD','MWD','BARO',
-			'ATMP','WTMP','DEWP','VIS','PTDY','TIDE']
-			df[cols] = df[cols].astype(float)
-		return df
-
 
 
 
