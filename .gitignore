@@ -1,0 +1,6 @@
+*.DS_Store
+*.pyc
+*.db
+filesforbuoynn
+*.zip
+*.ipynb_checkpoints
