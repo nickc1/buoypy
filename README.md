@@ -1,21 +1,18 @@
 
-buoypy - a work in progress
+buoypy
 ========
 
 Functions to query the [NDBC](http://www.ndbc.noaa.gov/).
 
 Returns pandas dataframes for the wave parameters.
 
-Currently only realtime data is implemented.
+Data descriptions - [Link][http://www.ndbc.noaa.gov/measdes.shtml]
 
 
+# Real Time - Last 45 Days
 
 The real time data for all of their buoys can be found at:
 http://www.ndbc.noaa.gov/data/realtime2/
-
-An explanation of the data can be found at:
-http://www.ndbc.noaa.gov/docs/ndbc_web_data_guide.pdf
-
 
 The realtime data provided is :
 
@@ -87,23 +84,87 @@ The data headers for each of the files are provided below.
 ```python
 import buoypy as bp
 
-rt = bp.realtime(41013) #Frying pan shoals
+buoy = 41108 #wilmington harbor
+B = bp.realtime(buoy) #wilmington harbor
 
-ocean_data = rt.get_ocean()
-wave_data = rt.get_spec()
+df = B.txt()
 
 # plotting
-fig,ax = plt.subplots(2,1,figsize = (10,10),sharex=True)
+fig,ax = plt.subplots(2,sharex=True)
+df.WVHT.plot(ax=ax[0])
+ax[0].set_ylabel('Wave Height (m)',fontsize=14)
 
-ocean_data['OTMP'].plot(ax=ax[0])
+df.DPD.plot(ax=ax[1])
+ax[1].set_ylabel('Dominant Period (sec)',fontsize=14)
+ax[1].set_xlabel('')
 sns.despine()
-wave_data['WVHT'].plot(ax=ax[1])
-sns.despine()
-
-ax[0].set_ylabel('Ocean Temperature ($^\circ C$)')
-ax[1].set_ylabel('Wave Height ($m$)')
-
-plt.savefig('../figures/realtime.png',bbox_inches='tight')
 ```
 
-![bouypy plots](/figures/realtime.png)
+![bouypy realtime](/figures/realtime.png)
+
+
+# Historic Data - All information from a buoy
+
+All buoys have different years that they are online. This aims to grab all the available data. Currently only grabbing the standard Meteorological data is implemented.
+
+The historic data provided is:
+
+|Description
+|-----------------------
+|	Standard Meteorological Data
+
+
+|YY	|MM	|DD	|hh	|mm	|WDIR	|WSPD	|GST	|WVHT	|DPD	|APD	|MWD	|PRES	|ATMP	|WTMP	|DEWP	|VIS	|TIDE
+|---|---|---|---|---|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|----
+|yr	|mo	|dy	|hr	|mn	|degT	|m/s	|m/s 	|m		|sec 	|sec	|degT	|hPa	|degC	|degC	|degC	|nmi	|ft
+
+
+
+```python
+import buoypy as bp
+
+buoy = 41108
+year = 2014
+
+H = bp.historic_data(buoy,year)
+df = H.get_stand_meteo()
+
+# plotting
+fig,ax = plt.subplots(2,sharex=True)
+df.WVHT.plot(ax=ax[0])
+ax[0].set_ylabel('Wave Height (m)',fontsize=14)
+
+df.DPD.plot(ax=ax[1])
+ax[1].set_ylabel('Dominant Period (sec)',fontsize=14)
+ax[1].set_xlabel('')
+sns.despine()
+```
+
+![bouypy historic](/figures/historic.png)
+
+Notice that the buoy went offline from the end of April, 2014 to mid August, 2014.
+
+
+# Historic Range - Grab data from a range of years
+
+```python
+
+import buoypy as bp
+buoy = 41108
+year = np.NAN
+year_range = (2010,2018)
+
+H = bp.historic_data(buoy,year,year_range)
+X = H.get_all_stand_meteo()
+
+#plotting
+fig,ax = plt.subplots(2,sharex=True)
+X.WVHT.plot(ax=ax[0])
+ax[0].set_ylabel('Wave Height (m)',fontsize=14)
+X.DPD.plot(ax=ax[1])
+ax[1].set_ylabel('Dominant Period (sec)',fontsize=14)
+ax[1].set_xlabel('')
+sns.despine()
+```
+
+![bouypy historic range](/figures/historic_range.png)

@@ -436,6 +436,7 @@ class realtime:
 			cols = ['WD','WSPD','GST','WVHT','DPD','APD','MWD','BARO',
 			'ATMP','WTMP','DEWP','VIS','PTDY','TIDE']
 			df[cols] = df[cols].astype(float)
+		df.index.name='Date'
 		return df
 
 ################################################
@@ -572,14 +573,14 @@ class historic_data:
 
 		for ii in range(len(month)):
 			mid = '.txt.gz&dir=data/stdmet/'
-			link = base + str(self.buoy) + str(k[ii]) + '2015' + mid + str(month[ii]) +'/'
+			link = base + str(self.buoy) + str(k[ii]) + '2016' + mid + str(month[ii]) +'/'
 
 			try:
 				urllib2.urlopen(link)
 				links.append(link)
 
 			except:
-				print(str(month[ii]) + '2015' + ' not in records')
+				print(str(month[ii]) + '2016' + ' not in records')
 				print link
 
 
