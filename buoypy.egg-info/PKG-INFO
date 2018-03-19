@@ -1,0 +1,10 @@
+Metadata-Version: 1.0
+Name: buoypy
+Version: 0.0.1
+Summary: buoypy scrapes the National Data Buoy Center and dumps it into pandas dataframes.
+Home-page: UNKNOWN
+Author: Nick Cortale
+Author-email: UNKNOWN
+License: UNKNOWN
+Description: UNKNOWN
+Platform: UNKNOWN
