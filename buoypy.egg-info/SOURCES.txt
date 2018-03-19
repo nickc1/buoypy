@@ -1,7 +1,0 @@
-buoypy/__init__.py
-buoypy/buoypy.py
-buoypy/get_data.py
-buoypy.egg-info/PKG-INFO
-buoypy.egg-info/SOURCES.txt
-buoypy.egg-info/dependency_links.txt
-buoypy.egg-info/top_level.txt

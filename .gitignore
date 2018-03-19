@@ -1,6 +1,8 @@
 *.DS_Store
 *.pyc
 *.db
-filesforbuoynn
+*.egg-info/
 *.zip
 *.ipynb_checkpoints
+__pycache__/
+.ipynb_checkpoints
