@@ -1,3 +1,5 @@
+# DEPRECATED: See [seebuoy](https://github.com/nickc1/seebuoy) for NDBC data.
+
 
 buoypy
 ========
